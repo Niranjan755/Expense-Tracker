@@ -17,9 +17,7 @@ export default function ExpenseTracker() {
   const [newUser, setNewUser] = useState("");
   const [form, setForm] = useState({});
   const [user, setUser] = useState(null);
-  const [initialLoaded, setInitialLoaded] = useState(false); // ✅ NEW
 
-  // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -27,7 +25,6 @@ export default function ExpenseTracker() {
     return () => unsubscribe();
   }, []);
 
-  // Fetch data from Firestore
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -38,22 +35,20 @@ export default function ExpenseTracker() {
         setUsers(data.users || []);
         setTransactions(data.transactions || []);
       }
-      setInitialLoaded(true); // ✅ Data loaded
     };
     fetchData();
   }, [user]);
 
-  // Save to Firestore ONLY after data is fetched
   useEffect(() => {
-    if (!user || !initialLoaded) return; // ✅ Block premature save
     const saveData = async () => {
+      if (!user) return;
       await setDoc(doc(db, "expenses", user.uid), {
         users,
         transactions
       });
     };
     saveData();
-  }, [users, transactions, user, initialLoaded]);
+  }, [users, transactions, user]);
 
   const handleLogin = () => signInWithPopup(auth, provider).catch(console.error);
   const handleLogout = () => signOut(auth);
@@ -83,17 +78,47 @@ export default function ExpenseTracker() {
     }
   };
 
-  const deleteTransaction = (index) => {
-    const updated = [...transactions];
-    updated.splice(index, 1);
-    setTransactions(updated);
-  };
+ const deleteTransaction = (index) => {
+  const confirmDelete = window.confirm("Are you sure you want to delete this transaction?");
+  if (!confirmDelete) return;
+
+  const updated = [...transactions];
+  updated.splice(index, 1);
+  setTransactions(updated);
+};
+
+
+  const deleteUser = (username) => {
+  const balance = calculateBalance(username);
+
+  if (balance !== 0) {
+    alert("Cannot delete user: Balance not settled.");
+    return;
+  }
+
+  const confirmDelete = window.confirm(`Are you sure you want to delete ${username}'s dashboard?`);
+  if (!confirmDelete) return;
+
+  const updatedUsers = users.filter(u => u !== username);
+  const updatedTransactions = transactions.filter(tx => tx.user !== username);
+  const updatedForm = { ...form };
+  delete updatedForm[username];
+
+  setUsers(updatedUsers);
+  setTransactions(updatedTransactions);
+  setForm(updatedForm);
+};
+
 
   const calculateBalance = (user) => {
     let balance = 0;
     transactions.forEach(({ user: txUser, amount, paidBy }) => {
       if (txUser === user) {
-        balance += paidBy === "Me" ? amount : -amount;
+        if (paidBy === "Me") {
+          balance += amount;
+        } else {
+          balance -= amount;
+        }
       }
     });
     return balance;
@@ -104,7 +129,43 @@ export default function ExpenseTracker() {
   };
 
   const calculateTotalBalance = () => {
-    return users.reduce((acc, user) => acc + calculateBalance(user), 0);
+    let total = 0;
+    users.forEach((user) => {
+      total += calculateBalance(user);
+    });
+    return total;
+  };
+
+  const cardStyle = {
+    border: "1px solid #ccc",
+    borderRadius: "8px",
+    padding: "20px",
+    marginBottom: "20px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+  };
+
+  const inputStyle = {
+    padding: "8px",
+    marginRight: "10px",
+    marginBottom: "10px",
+    borderRadius: "4px",
+    border: "1px solid #ccc"
+  };
+
+  const buttonStyle = {
+    padding: "8px 12px",
+    borderRadius: "4px",
+    backgroundColor: "#007bff",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+    marginBottom: "10px"
+  };
+
+  const deleteButtonStyle = {
+    ...buttonStyle,
+    backgroundColor: "#dc3545",
+    marginLeft: "10px"
   };
 
   const balanceTextStyle = (balance) => ({
@@ -117,17 +178,13 @@ export default function ExpenseTracker() {
       {!user ? (
         <div style={{ textAlign: "center", marginTop: "100px" }}>
           <h2>Login to Access Your Expense Tracker</h2>
-          <button onClick={handleLogin} style={{ padding: "10px 20px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "4px" }}>
-            Login with Google
-          </button>
+          <button onClick={handleLogin} style={buttonStyle}>Login with Google</button>
         </div>
       ) : (
         <>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
             <h2>Welcome, {user.displayName}</h2>
-            <button onClick={handleLogout} style={{ padding: "8px 12px", borderRadius: "4px", backgroundColor: "#dc3545", color: "white", border: "none" }}>
-              Logout
-            </button>
+            <button onClick={handleLogout} style={{ ...buttonStyle, backgroundColor: "#dc3545" }}>Logout</button>
           </div>
 
           <div style={cardStyle}>
@@ -165,6 +222,15 @@ export default function ExpenseTracker() {
                   </span>
                 </div>
 
+                {bal === 0 && (
+                  <button
+                    onClick={() => deleteUser(user)}
+                    style={{ ...buttonStyle, backgroundColor: "#6c757d", marginBottom: "15px" }}
+                  >
+                    Delete User
+                  </button>
+                )}
+
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
                   <input
                     type="number"
@@ -199,7 +265,7 @@ export default function ExpenseTracker() {
                         {tx.paidBy === "Me" ? `You paid $${tx.amount} to ${user}` : `${user} paid $${tx.amount} to You`}<br />
                         <small>{tx.note && `Note: ${tx.note} — `}{tx.date}</small>
                       </span>
-                      <button onClick={() => deleteTransaction(transactions.indexOf(tx))} style={{ ...buttonStyle, backgroundColor: "#dc3545" }}>Delete</button>
+                      <button onClick={() => deleteTransaction(transactions.indexOf(tx))} style={deleteButtonStyle}>Delete</button>
                     </div>
                   ))}
                 </div>
@@ -211,28 +277,3 @@ export default function ExpenseTracker() {
     </div>
   );
 }
-
-// Shared styles
-const cardStyle = {
-  border: "1px solid #ccc",
-  borderRadius: "8px",
-  padding: "20px",
-  marginBottom: "20px",
-  boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
-};
-
-const inputStyle = {
-  padding: "8px",
-  marginRight: "10px",
-  borderRadius: "4px",
-  border: "1px solid #ccc"
-};
-
-const buttonStyle = {
-  padding: "8px 12px",
-  borderRadius: "4px",
-  backgroundColor: "#007bff",
-  color: "white",
-  border: "none",
-  cursor: "pointer"
-};
