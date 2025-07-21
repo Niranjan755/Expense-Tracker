@@ -36,3 +36,92 @@
     transform: rotate(360deg);
   }
 }
+
+
+/* App.css */
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f8f9fa;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1rem 2rem;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+button {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button.add-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+button.delete-btn {
+  background-color: #dc3545;
+  color: white;
+  margin-top: 4px;
+}
+
+button.logout-btn {
+  background-color: #c82333;
+  color: white;
+  float: right;
+}
+
+button.dashboard-delete-btn {
+  background-color: orange;
+  color: black;
+  font-weight: bold;
+}
+
+input, select {
+  padding: 0.4rem;
+  margin: 0.3rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.user-section, .summary-section, .dashboard {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-top: 1px solid #e1e1e1;
+}
+
+.transaction {
+  margin-left: 1rem;
+}
+
+.transaction-list {
+  list-style: disc;
+  padding-left: 2rem;
+}
+
+.balance-positive {
+  color: green;
+}
+
+.balance-negative {
+  color: red;
+}
+
+.dashboard h3 {
+  margin-bottom: 0.5rem;
+}
